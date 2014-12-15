@@ -21,39 +21,59 @@ class _Fishrob(object):
         self._parts = iterable
 
     def p(self):
+        "Iterate and print each chunk, not adding a new line"
         for part in self._parts:
             print(part, end='')
 
     def pl(self):
+        "Iterate and print each chunk, adding a newline between each"
         for part in self._parts:
             print(part)
 
     def x(self, pattern, flags=0):
+        "Break each chunk into bits: the substrings that match the pattern"
         pat = re.compile(pattern, flags)
 
-        def gen():
-            for part in self._parts:
-                for match in pat.finditer(part):
-                    yield match.group(0)
+        def extract(text):
+            for match in pat.finditer(text):
+                yield match.group(0)
 
-        return _Fishrob(gen())
+        return self.mapiter(extract)
 
     def g(self, pattern, flags=0):
+        "Filter chunks, keeping only those that match the pattern"
         pat = re.compile(pattern, flags)
 
+        return self.filter(pat.search)
+
+    def filter(self, pred):
+        "Keep only some chunks"
+        return _Fishrob(part for part in self._parts if pred(part))
+
+    def map(self, func):
+        "Transform the current text using a function"
+        return _Fishrob(func(part) for part in self._parts)
+
+    def mapiter(self, func):
+        "Break the current text into parts using a function"
         def gen():
             for part in self._parts:
-                if pat.search(part):
-                    yield part
+                for chunk in func(part):
+                    yield chunk
 
         return _Fishrob(gen())
+
+    def __iter__(self):
+        return iter(self._parts)
+
+    def each(self, routine):
+        "Iterate and apply routine to each chunk"
+        for part in self._parts:
+            routine(part)
 
 
 # TODO:
 # Operators from the paper: y, v, c
-#
-# .map() - remain lazy
-# .each() - iterate, with side effects
 #
 # Would it work??: .balanced(start, end) - match balanced parens or brackets
 # (at the current level, skipping nested ones?).
